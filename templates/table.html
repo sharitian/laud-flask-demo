@@ -1,0 +1,25 @@
+{% extends "base.html"%}
+{% block title %} Contingency Table {% endblock %}
+{% block content %}
+{% with messages = get_flashed_messages() %}
+		{% if messages %}
+			{% for msg in messages %}
+				<p>{{msg}}</p>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
+<table border = 1>
+	<tr> 
+		{% for name in field_names %} 
+			<th>{{name}}</th>
+		{% endfor %}
+	</tr>
+	{% for row in cont_table %}
+	<tr>
+		{%for i in range(row|length)%}
+			<td>{{row[i]}} </td>
+		{% endfor %}
+	</tr>
+	{% endfor %}
+</table>
+{% endblock %}
