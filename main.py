@@ -1,8 +1,14 @@
-from flask import Flask, render_template, url_for, request, flash, redirect, session
+from flask import Flask, render_template, url_for, request, flash, redirect, session, make_response
 from flask_mysqldb import MySQL
+import os, subprocess
+from subprocess import Popen, PIPE, check_output
 import yaml
 import chisq
+import csv
+import io
+import pandas as pd
 
+path = os.getcwd()
 
 app = Flask(__name__)
 
@@ -22,7 +28,7 @@ def home():
 	return render_template("home.html")
 
 
-@app.route("/view")
+@app.route("/view", methods = ["GET", "POST"])
 def view():
 	cur = mysql.connection.cursor()
 	resultValue = cur.execute("SELECT * FROM diamonds1")
@@ -30,6 +36,33 @@ def view():
 		field_names = [i[0] for i in cur.description]
 		diamondDetails = cur.fetchall()
 		return render_template("view.html", diamondDetails = diamondDetails, field_names = field_names)
+	
+
+# @app.route("/export")
+# def export():
+# 	si = io.StringIO()
+# 	cw = csv.writer(si)
+# 	cur = mysql.connection.cursor()
+# 	cur.execute("SELECT * FROM diamonds1")
+# 	rows = cur.fetchall()
+# 	cw.writerow([i[0] for i in cur.description])
+# 	cw.writerows(rows)
+# 	response = make_response(si.getvalue())
+# 	response.headers["Content-Disposition"] = "attachment; filename = report.csv"
+# 	response.headers["Content-type"] = "text/csv"
+# 	return response
+
+
+@app.route("/export")
+def export():
+	cur = mysql.connection.cursor()
+	resultValue = cur.execute("SELECT * FROM diamonds1")
+	if resultValue > 0:
+		field_names = [i[0] for i in cur.description]
+		diamondDetails = cur.fetchall()
+		df = pd.DataFrame(diamondDetails, columns = field_names)
+		df.to_csv(os.getcwd() + "/report.csv", index = False)
+		return redirect(url_for("view"))
 
 
 @app.route("/query", methods = ["GET", "POST"])
@@ -43,14 +76,22 @@ def query():
 		return redirect(url_for("table"))
 	else:
 		return render_template("query.html")
-
+		
 
 @app.route("/chi", methods = ["GET", "POST"])
 def chi():
 	if request.method == "POST":
-		return redirect(url_for("result"))
+		if "cat1" in session and "cat2" in session:
+			return redirect(url_for("command_server0", command=command_server0))
+		else:
+			return redirect(url_for("query"))
 	else:
-		return render_template("chi.html")
+		if os.path.isfile("./report.csv"):
+			return render_template("chi.html")
+		else:
+			flash("Data exported. Enter a query.")
+			return redirect(url_for("export"))
+
 
 
 @app.route("/table")
@@ -58,7 +99,7 @@ def table():
 	cat1 = session["cat1"] 
 	cat2 = session["cat2"] 
 	cur = mysql.connection.cursor()
-	query = "SELECT " + cat1 + ", " + cat2 + ", " + "count(*) as count FROM diamonds1 GROUP BY " + cat1 + ", " + cat2 + " ORDER BY " +  cat1
+	query = "SELECT " + cat1 + ", " + cat2 + " FROM diamonds1" 
 	resultValue = cur.execute(query)
 	if resultValue > 0:
 		field_names = [i[0] for i in cur.description]
@@ -66,20 +107,42 @@ def table():
 		return render_template("table.html", cont_table = cont_table, field_names = field_names)
 
 
-@app.route("/result")
-def result():
-	if "cat1" in session and "cat2" in session:
-		cat1 = session["cat1"] 
-		cat2 = session["cat2"] 
-		return chisq.chi_sq(cat1, cat2)
+
+@app.route("/scat", methods = ["GET", "POST"])
+def scat():
+	if request.method == "POST":
+		if "cat1" in session and "cat2" in session:
+			return redirect(url_for("command_server1", command=command_server1))
+		else:
+			return redirect(url_for("query"))
 	else:
-		return redirect(url_for("query"))
+		if os.path.isfile("./report.csv"):
+			return render_template("scat.html")
+		else:
+			flash("Data exported. Enter a query.")
+			return redirect(url_for("export"))
+
 
 @app.route("/clear")
 def clear():
 	session.pop("cat1", None)
 	session.pop("cat2", None)
+	os.remove(os.getcwd() + "/report.csv")
 	return redirect(url_for("home"))
+
+
+def run_command(command):
+	return subprocess.Popen(command, shell = True, stdout = subprocess.PIPE).stdout.read()
+
+
+@app.route("/command0/<command>")
+def command_server0(command):
+	return run_command("python " + path + "/chisq.py " + session["cat1"] + " " + session["cat2"])
+
+@app.route("/command1/<command>")
+def command_server1(command):
+	return run_command("Rscript " + path + "/visualize.R " + session["cat1"] + " " + session["cat2"])
+
 
 if __name__ == "__main__":
 	app.run(debug = True)
