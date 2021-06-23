@@ -89,7 +89,6 @@ def chi():
 		if os.path.isfile("./report.csv"):
 			return render_template("chi.html")
 		else:
-			flash("Data exported. Enter a query.")
 			return redirect(url_for("export"))
 
 
@@ -119,7 +118,6 @@ def scat():
 		if os.path.isfile("./report.csv"):
 			return render_template("scat.html")
 		else:
-			flash("Data exported. Enter a query.")
 			return redirect(url_for("export"))
 
 
@@ -127,7 +125,8 @@ def scat():
 def clear():
 	session.pop("cat1", None)
 	session.pop("cat2", None)
-	os.remove(os.getcwd() + "/report.csv")
+	if os.path.isfile("./report.csv"):
+		os.remove(os.getcwd() + "/report.csv")
 	return redirect(url_for("home"))
 
 

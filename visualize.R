@@ -19,8 +19,8 @@ scatter_plot <- function(xvar, yvar){
 
 windows()
 scatter_plot(args[1], args[2])
-prompt <- "hit spacebar to close plots"
-extra <- "some extra comment"
+prompt <- "Press okay to close plots."
+extra <- "Go back to return to demo."
 capture <- tk_messageBox(message = prompt, detail = extra)
 
 
