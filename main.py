@@ -20,6 +20,7 @@ app.config["MYSQL_USER"] = db["mysql_user"]
 app.config["MYSQL_PASSWORD"] = db["mysql_password"]
 app.config["MYSQL_DB"] = db["mysql_db"]
 
+
 mysql = MySQL(app)
 
 
@@ -62,7 +63,7 @@ def export():
 		diamondDetails = cur.fetchall()
 		df = pd.DataFrame(diamondDetails, columns = field_names)
 		df.to_csv(os.getcwd() + "/report.csv", index = False)
-		return redirect(url_for("view"))
+		return redirect(url_for("query"))
 
 
 @app.route("/query", methods = ["GET", "POST"])
